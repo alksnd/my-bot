@@ -1,9 +1,9 @@
-import os, asyncio
+import os
+import asyncio
 from dotenv import load_dotenv
 from groq import Groq
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
-from telegram.ext import Application, CommandHandler, MessageHandler, \
-    CallbackQueryHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 
 # 1. إعداد الاتصال
 load_dotenv()
@@ -23,67 +23,68 @@ max_tokens_map = {
 }
 
 # 3. القائمة الرئيسية
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, ctx):
     keyboard = [
         [InlineKeyboardButton("منشور سوشيال ميديا", callback_data="social")],
         [InlineKeyboardButton("مقال بلوق", callback_data="blog")],
         [InlineKeyboardButton("إعلان تسويقي", callback_data="ad")],
-        [InlineKeyboardButton("وصف منتج 🛍️", callback_data="product")],
-        [InlineKeyboardButton("🌟 اشتراك النجوم", callback_data="sub_info")],
+        [InlineKeyboardButton("وصف منتج", callback_data="product")],
+        [InlineKeyboardButton("✨ اشتراك النجوم ✨", callback_data="sub_info")]
     ]
-    await update.message.reply_text(
-        "مرحباً بك! اختر نوع المحتوى الذي تريده:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("مرحباً بك! اختر نوع المحتوى الذي تريده", reply_markup=reply_markup)
 
 # 4. نظام الاشتراك
-async def subscribe(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def subscribe(update: Update, ctx):
     await ctx.bot.send_invoice(
         chat_id=update.effective_chat.id,
-        title="النسخة الاحترافية 🌟",
+        title="✨ النسخة الاحترافية ✨",
         description="استخدام غير محدود لكافة الأدوات",
         payload="monthly_sub",
-        currency="XTR", 
+        currency="XTR",
         prices=[LabeledPrice("اشتراك شهري", 100)]
     )
 
-async def successful_payment(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def successful_payment(update: Update, ctx):
     uid = update.effective_user.id
     paid_users.add(uid)
     user_counts[uid] = 0
-    await update.message.reply_text("✅ تم تفعيل الاشتراك بنجاح!")
+    await update.message.reply_text("✅ تم تفعيل الاشتراك بنجاح ✅")
 
 # 5. معالج الأزرار
-async def button_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def button_handler(update: Update, ctx):
     query = update.callback_query
     await query.answer()
     if query.data == "sub_info":
         await subscribe(update, ctx)
         return
+
     ctx.user_data["content_type"] = query.data
     prompts = {
         "social": "أرسل الموضوع وسأكتب منشوراً جذاباً",
         "blog": "أعطني عنوان المقال وسأكتبه لك",
         "ad": "أخبرني عن المنتج وسأكتب إعلاناً مقنعاً",
-        "product": "أرسل اسم المنتج ومميزاته لوصفه بيعياً",
+        "product": "أرسل اسم المنتج ومميزاته لوصفه بيعياً"
     }
     await query.message.reply_text(prompts.get(query.data, "تفضل بإرسال موضوعك"))
 
 # 6. توليد المحتوى
-async def generate_content(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def generate_content(update: Update, ctx):
     uid = update.effective_user.id
     user_counts[uid] = user_counts.get(uid, 0) + 1
     if uid not in paid_users and user_counts[uid] > FREE_LIMIT:
-        await update.message.reply_text("⚠️ انتهت طلباتك المجانية! للاشتراك: /subscribe")
+        await update.message.reply_text("⚠️ انتهت طلباتك المجانية! للاشتراك /subscribe")
         return
+
     content_type = ctx.user_data.get("content_type", "social")
     system_prompts = {
-        "social": "أنت خبير سوشيال ميديا. اكتب منشوراً جذاباً بالعربية.",
-        "blog": "أنت كاتب محتوى محترف. اكتب مقالاً منظماً بالعربية.",
-        "ad": "أنت متخصص في التسويق. اكتب إعلاناً مقنعاً.",
-        "product": "أنت كاتب تجارة إلكترونية. اكتب وصفاً جذاباً للمنتج.",
+        "social": "أنت خبير سوشيال ميديا. اكتب منشوراً جذاباً بالعربية",
+        "blog": "أنت كاتب محتوى محترف. اكتب مقالاً منظماً بالعربية",
+        "ad": "أنت متخصص في التسويق. اكتب إعلاناً مقنعاً بالعربية",
+        "product": "أنت كاتب تجارة إلكترونية. اكتب وصفاً جذاباً للمنتج"
     }
-    await update.message.reply_text("جاري الكتابة... ✍️")
+
+    await update.message.reply_text("✍️ جاري الكتابة...")
     try:
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -95,10 +96,10 @@ async def generate_content(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         result = response.choices[0].message.content
         remaining = max(0, FREE_LIMIT - user_counts[uid])
-        footer = f"\n\n— متبقي {remaining} طلبات مجانية" if uid not in paid_users else "✨ حساب بريميوم"
+        footer = f"\n\n\n💡 متبقي {remaining} طلبات مجانية" if uid not in paid_users else "👑 حساب بريميوم 👑"
         await update.message.reply_text(result + footer)
-    except:
-        await update.message.reply_text("حدث خطأ تقني، حاول لاحقاً.")
+    except Exception as e:
+        await update.message.reply_text(f"حدث خطأ تقني. حاول لاحقاً: {e}")
 
 # 7. التشغيل
 def main():
@@ -108,6 +109,9 @@ def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, generate_content))
+    
+    # Use run_polling for local development or as a worker process
+    # For webhooks in production, you would use app.run_webhook
     app.run_polling()
 
 if __name__ == "__main__":
