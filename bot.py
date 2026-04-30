@@ -1,4 +1,4 @@
-bot.pyimport os, asyncio
+import os, asyncio
 from dotenv import load_dotenv
 from groq import Groq
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
